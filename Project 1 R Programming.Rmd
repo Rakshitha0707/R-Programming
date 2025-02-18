@@ -1,0 +1,179 @@
+---
+title: "HW_4"
+author: "Rakshitha"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(tidyverse, tidytext, lubridate, stringr,dplyr,
+                 textdata, hrbrthemes)
+library(tidyr)
+library(dplyr)
+
+```
+
+```{r}
+
+load("song_lyrics.rda")
+dim(song_lyrics)
+ str(song_lyrics)
+ head(song_lyrics, 20)
+```
+
+Question 1: Tokenize the lyrics variable, count the number of words in each song, and merge the total number of words in each song with the data (this will add a new column to the data). Print a few rows of the updated data set showing the total number of words in each song.
+
+
+
+```{r}
+wrd_tot <- song_lyrics %>%
+  unnest_tokens(word, lyrics)
+  glimpse(wrd_tot)
+
+```
+
+```{r}
+total_cnt <- wrd_tot %>%
+count(song) %>%
+rename(total_words = n)
+glimpse(wrd_tot)
+wrd_tot
+```
+# Printing a few rows of the updated data set showing the total number of words in each song. 
+
+```{r}
+head(total_cnt,20)
+lyrics_count <- wrd_tot %>%
+left_join(total_cnt, by = "song")
+```
+
+
+Question 2: Create sentiment scores using “bing” lexicon and count the number of sentiment words (number of positive and number of negative sentiment words, separately) in each song. Print two separate tables: (i) songs with the highest percentage of positive words; (ii) songs with the highest percentage of negative words.
+
+# sentiment analysis with the "bing" lexicon
+```{r}
+Sentiment_Score <- lyrics_count %>%
+inner_join(get_sentiments("bing"))
+```
+
+# sentiment analysis with "inner_join"()
+
+```{r}
+Sentiment_Score %>%
+count(sentiment, sort = TRUE)
+```
+
+# sentiment Analysis for each song
+
+```{r}
+Sentiment_Score %>%
+count(song, sentiment, sort = TRUE)
+
+```
+
+
+#highest percentage of negative words
+
+```{r}
+Sentiment_Score %>%
+    count(rank, song, word, sentiment) %>%
+    ungroup() %>%
+    mutate(percent = n / sum(n)*100) %>%
+    filter(sentiment == "negative") %>%
+    arrange(desc(percent))
+```
+
+#highest percentage of positive words
+
+```{r}
+Sentiment_Score %>%
+    count(rank, song, word, sentiment) %>%
+    ungroup() %>%
+    mutate(percent = n / sum(n)*100) %>%
+    filter(sentiment == "positive") %>%
+    arrange(desc(percent))
+```
+
+# highest percentage of negative sentiment
+
+```{r}
+Sentiment_Score %>%
+    count(rank, song, sentiment, total_words) %>%
+    ungroup() %>%
+    mutate(percent = n / total_words*100) %>%
+    filter(sentiment == "negative") %>%
+    arrange(desc(percent))
+```
+
+#highest percentage of positive sentiment
+
+```{r}
+Sentiment_Score %>%
+    count(rank, song, sentiment, total_words) %>%
+    ungroup() %>%
+    mutate(percent = n / total_words*100) %>%
+    filter(sentiment == "positive") %>%
+    arrange(desc(percent))
+```
+
+
+Question 3:Do songs with a higher percent of negative words rank higher on the Billboard chart (rank 1 is the highest and rank 100 is the lowest)? Answer this question by grouping songs in the following groups: 1-10, 11-20, …, and 91-100. Use boxplots for each of these groups, with ranking groups on the x axis and percent of negative words on the y axis.
+
+
+
+#positive sentiment box plot
+```{r }
+Sentiment_Score %>%
+    filter(sentiment == "positive") %>%
+    count(song, rank, total_words) %>%
+    ungroup() %>%
+  
+#Mutate
+mutate(percent = n / total_words*100,
+       rank = 10 * floor(rank / 10)) %>%
+ 
+  #ggplot   
+ggplot(aes(as.factor(rank), percent)) + geom_boxplot(color="red", fill="black", alpha=0.3)+
+  labs(title = "Positive sentiment box plot")
+  
+```
+#negative sentiment boxplot
+```{r}
+Sentiment_Score %>%
+  filter(sentiment == "negative") %>%
+  count(song, rank, total_words) %>%
+  ungroup() %>%
+  
+# Mutate 
+mutate(percent = n / total_words*100,
+       rank = 10 * floor(rank / 10)) %>%
+    
+# ggplot with rank and percent
+ggplot(aes(as.factor(rank), percent)) + geom_boxplot(color="orange", fill="blue", alpha=0.2)+
+  labs(title = "Negative sentiment box plot")
+   
+```
+It appears that high rank songs tend to utilize positive lyrics.The mean of positive sentiment is higher than that of negative sentiment, as seen by the parallel box plots.Furthermore, the spread of words might be as high as 10-20% with good sentiments against a spread of roughly 10% with negative attitudes.
+
+
+Question 4:Have the percent of positive words in a song increased over the decade? Answer this question by grouping songs over decades: 1960-1969, 1970-1979, …, 2010-2019. Use boxplots for each of these groups, with decades on the x axis and the percent of positive words on the y-axis.
+
+
+```{r}
+# Positive sentiment changing over time
+Sentiment_Score %>%
+    filter(sentiment == "positive") %>%
+    count(song, year, total_words) %>%
+    ungroup() %>%
+    mutate(percent = n / total_words*100,
+           year = 10 * floor(year / 10)) %>%
+    # ggplot with year and percent
+    ggplot(aes(as.factor(year), percent)) +
+    geom_boxplot(color = "red", fill = "purple", alpha = 0.3)
+```
+The rate of positive words in song lyrics has dropped over the decades from 1970 to 2010 which is clearly represented in the above parallel box plot.
